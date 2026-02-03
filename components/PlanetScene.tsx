@@ -258,10 +258,13 @@ const CameraController: React.FC<{ isProbeLanding: boolean }> = ({ isProbeLandin
     if (controlsRef.current) {
       const targetDist = isProbeLanding ? 2.2 : 6; 
       const currentDist = controlsRef.current.object.position.length();
-      const newDist = THREE.MathUtils.lerp(currentDist, targetDist, delta * 2);
       
-      controlsRef.current.object.position.setLength(newDist);
-      controlsRef.current.update();
+      if (Math.abs(currentDist - targetDist) > 0.01) {
+        const newDist = THREE.MathUtils.lerp(currentDist, targetDist, delta * 2);
+
+        controlsRef.current.object.position.setLength(newDist);
+        controlsRef.current.update();
+      }
     }
   });
 
