@@ -114,7 +114,7 @@ describe('PlanetMesh Material Stability', () => {
     // 1: Clouds (mesh)
     // 2: Atmosphere (mesh)
     const planetMesh = group.children[0];
-    const material = planetMesh.instance.material as THREE.ShaderMaterial;
+    const material = (planetMesh.instance as THREE.Mesh).material as THREE.ShaderMaterial;
 
     // Check if material is indeed the one we are spying on (it should be)
 

@@ -162,7 +162,7 @@ export const PlanetMesh: React.FC<{ params: PlanetParameters, onClick: (uv: THRE
         uCityIntensity: { value: params.cityLightIntensity }
       }
     });
-  }, [sunDir, sunColorVec, cityNoiseTexture]); // Note: textures not in dep array to avoid full material rebuild, we update uniform directly
+  }, [sunDir, cityNoiseTexture]); // Note: textures not in dep array to avoid full material rebuild, we update uniform directly
 
   // Effect to update material uniforms when textures/params change without rebuilding material
   useEffect(() => {
