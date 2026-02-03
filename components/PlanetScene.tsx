@@ -96,6 +96,59 @@ export const PlanetMesh: React.FC<{ params: PlanetParameters, onClick: (uv: THRE
     }
   };
 
+  // Generate a seamless noise texture for city lights
+  const cityNoiseTexture = useMemo(() => {
+      const size = 64;
+      const data = new Uint8Array(size * size * 4);
+
+      // Generate low-res base noise (16x16) for coherence
+      const baseSize = 16;
+      const baseData = new Float32Array(baseSize * baseSize);
+      for(let i=0; i<baseData.length; i++) baseData[i] = Math.random();
+
+      // Upscale to size x size with bilinear interpolation and wrapping
+      for (let y = 0; y < size; y++) {
+          for (let x = 0; x < size; x++) {
+              // Normalized coords in base grid
+              const u = (x / size) * baseSize;
+              const v = (y / size) * baseSize;
+
+              const x0 = Math.floor(u);
+              const y0 = Math.floor(v);
+              const x1 = (x0 + 1) % baseSize;
+              const y1 = (y0 + 1) % baseSize; // Wrap for seamlessness
+
+              const fracX = u - x0;
+              const fracY = v - y0;
+
+              // Bilinear interp
+              const v00 = baseData[y0 * baseSize + x0];
+              const v10 = baseData[y0 * baseSize + x1];
+              const v01 = baseData[y1 * baseSize + x0];
+              const v11 = baseData[y1 * baseSize + x1];
+
+              const i1 = v00 * (1 - fracX) + v10 * fracX;
+              const i2 = v01 * (1 - fracX) + v11 * fracX;
+              const val = i1 * (1 - fracY) + i2 * fracY;
+
+              const byteVal = Math.floor(val * 255);
+              const idx = (y * size + x) * 4;
+              data[idx] = byteVal;
+              data[idx+1] = byteVal;
+              data[idx+2] = byteVal;
+              data[idx+3] = 255;
+          }
+      }
+
+      const texture = new THREE.DataTexture(data, size, size, THREE.RGBAFormat);
+      texture.wrapS = THREE.RepeatWrapping;
+      texture.wrapT = THREE.RepeatWrapping;
+      texture.minFilter = THREE.LinearFilter;
+      texture.magFilter = THREE.LinearFilter;
+      texture.needsUpdate = true;
+      return texture;
+  }, []);
+
   const planetMaterial = useMemo(() => {
     return new THREE.ShaderMaterial({
       vertexShader: planetVertexShader,
@@ -105,6 +158,7 @@ export const PlanetMesh: React.FC<{ params: PlanetParameters, onClick: (uv: THRE
         uDayTexture: { value: textures.day },
         uSpecularTexture: { value: textures.spec },
         uNormalMap: { value: textures.norm },
+        uCityNoiseTexture: { value: cityNoiseTexture },
         uSunDirection: { value: sunDir },
         uMode: { value: 0 },
         uSunColor: { value: sunColorVec },
@@ -114,6 +168,7 @@ export const PlanetMesh: React.FC<{ params: PlanetParameters, onClick: (uv: THRE
         uCityIntensity: { value: params.cityLightIntensity }
       }
     });
+  }, [sunDir, sunColorVec, cityNoiseTexture]); // Note: textures not in dep array to avoid full material rebuild, we update uniform directly
   }, [sunDir]); // Note: textures not in dep array to avoid full material rebuild, we update uniform directly
 
   // Effect to update material uniforms when textures/params change without rebuilding material
