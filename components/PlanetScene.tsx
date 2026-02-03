@@ -56,6 +56,12 @@ const SatelliteRing = () => {
   );
 }
 
+const SUN_COLORS = {
+  red: new THREE.Vector3(1.0, 0.4, 0.3),
+  blue: new THREE.Vector3(0.6, 0.8, 1.0),
+  default: new THREE.Vector3(1.0, 0.95, 0.9),
+};
+
 export const PlanetMesh: React.FC<{ params: PlanetParameters, onClick: (uv: THREE.Vector2) => void }> = ({ params, onClick }) => {
   const meshRef = useRef<THREE.Mesh>(null);
   const cloudRef = useRef<THREE.Mesh>(null);
@@ -77,13 +83,13 @@ export const PlanetMesh: React.FC<{ params: PlanetParameters, onClick: (uv: THRE
   // Helper to map SunType to Color
   const getSunColor = (type: string) => {
     switch(type) {
-      case 'red': return new THREE.Vector3(1.0, 0.4, 0.3);
-      case 'blue': return new THREE.Vector3(0.6, 0.8, 1.0);
-      default: return new THREE.Vector3(1.0, 0.95, 0.9);
+      case 'red': return SUN_COLORS.red;
+      case 'blue': return SUN_COLORS.blue;
+      default: return SUN_COLORS.default;
     }
   };
 
-  const sunColorVec = useMemo(() => getSunColor(params.sunType), [params.sunType]);
+  const sunColorVec = getSunColor(params.sunType);
   const sunDir = useMemo(() => new THREE.Vector3(1, 0.5, 1).normalize(), []);
 
   // Map DataLayer string to int
