@@ -13,20 +13,6 @@ import {
 } from './PlanetShader';
 import * as random from 'maath/random/dist/maath-random.esm';
 
-// Fix missing JSX types for React Three Fiber elements
-declare global {
-  namespace JSX {
-    interface IntrinsicElements {
-      group: any;
-      mesh: any;
-      sphereGeometry: any;
-      meshBasicMaterial: any;
-      ambientLight: any;
-      pointLight: any;
-    }
-  }
-}
-
 interface SceneProps {
   params: PlanetParameters;
   onPlanetClick: (uv: THREE.Vector2) => void;
@@ -176,7 +162,7 @@ export const PlanetMesh: React.FC<{ params: PlanetParameters, onClick: (uv: THRE
         uCityIntensity: { value: params.cityLightIntensity }
       }
     });
-  }, []); // Note: textures not in dep array to avoid full material rebuild, we update uniform directly
+  }, [sunDir, sunColorVec, cityNoiseTexture]); // Note: textures not in dep array to avoid full material rebuild, we update uniform directly
 
   // Effect to update material uniforms when textures/params change without rebuilding material
   useEffect(() => {
