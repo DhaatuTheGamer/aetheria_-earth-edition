@@ -56,7 +56,7 @@ const SatelliteRing = () => {
   );
 }
 
-const PlanetMesh: React.FC<{ params: PlanetParameters, onClick: (uv: THREE.Vector2) => void }> = ({ params, onClick }) => {
+export const PlanetMesh: React.FC<{ params: PlanetParameters, onClick: (uv: THREE.Vector2) => void }> = ({ params, onClick }) => {
   const meshRef = useRef<THREE.Mesh>(null);
   const cloudRef = useRef<THREE.Mesh>(null);
 
@@ -114,7 +114,7 @@ const PlanetMesh: React.FC<{ params: PlanetParameters, onClick: (uv: THREE.Vecto
         uCityIntensity: { value: params.cityLightIntensity }
       }
     });
-  }, [sunDir, sunColorVec]); // Note: textures not in dep array to avoid full material rebuild, we update uniform directly
+  }, [sunDir]); // Note: textures not in dep array to avoid full material rebuild, we update uniform directly
 
   // Effect to update material uniforms when textures/params change without rebuilding material
   useEffect(() => {
@@ -125,14 +125,37 @@ const PlanetMesh: React.FC<{ params: PlanetParameters, onClick: (uv: THREE.Vecto
         mat.uniforms.uNormalMap.value = textures.norm;
         mat.uniforms.uCityColor.value.set(params.cityLightColor);
         mat.uniforms.uCityIntensity.value = params.cityLightIntensity;
+        mat.uniforms.uMode.value = getModeInt(params.dataLayer);
+        mat.uniforms.uSunColor.value = sunColorVec;
+        mat.uniforms.uSnowLevel.value = params.snowLevel;
+        mat.uniforms.uWaterMurkiness.value = params.waterMurkiness;
+
+        // Also update rotation that isn't dependent on delta (though usually better in useFrame for consistency, but tilt is static)
+        meshRef.current.rotation.z = params.tilt;
+
         mat.needsUpdate = true;
     }
     if (cloudRef.current) {
         const mat = cloudRef.current.material as THREE.ShaderMaterial;
         mat.uniforms.uCloudTexture.value = textures.cloud;
+        mat.uniforms.uSunColor.value = sunColorVec;
+        mat.uniforms.uCloudDensity.value = params.cloudDensity;
+
+        cloudRef.current.rotation.z = params.tilt;
+
         mat.needsUpdate = true;
     }
-  }, [textures, params.cityLightColor, params.cityLightIntensity]);
+  }, [
+    textures,
+    params.cityLightColor,
+    params.cityLightIntensity,
+    params.dataLayer,
+    sunColorVec,
+    params.snowLevel,
+    params.waterMurkiness,
+    params.tilt,
+    params.cloudDensity
+  ]);
 
 
   const cloudMaterial = useMemo(() => {
@@ -149,7 +172,7 @@ const PlanetMesh: React.FC<{ params: PlanetParameters, onClick: (uv: THREE.Vecto
         uCloudDensity: { value: 0.5 }
       }
     });
-  }, [sunDir, sunColorVec]);
+  }, [sunDir]);
 
   const atmosMaterial = useMemo(() => {
     return new THREE.ShaderMaterial({
@@ -163,36 +186,31 @@ const PlanetMesh: React.FC<{ params: PlanetParameters, onClick: (uv: THREE.Vecto
         uSunColor: { value: sunColorVec }
       }
     });
-  }, [params.atmosphereColor, sunColorVec]);
+  }, []);
+
+  // Effect to update atmosphere uniforms
+  useEffect(() => {
+      if (atmosMaterial) {
+         atmosMaterial.uniforms.uAtmosphereColor.value.set(params.atmosphereColor);
+         atmosMaterial.uniforms.uSunColor.value = sunColorVec;
+      }
+  }, [atmosMaterial, params.atmosphereColor, sunColorVec]);
 
   useFrame((state, delta) => {
     const time = state.clock.elapsedTime;
     
     if (meshRef.current) {
       meshRef.current.rotation.y += params.rotationSpeed * delta * 0.1; 
-      meshRef.current.rotation.z = params.tilt; 
       
       const mat = meshRef.current.material as THREE.ShaderMaterial;
       mat.uniforms.uTime.value = time;
-      mat.uniforms.uMode.value = getModeInt(params.dataLayer);
-      mat.uniforms.uSunColor.value = sunColorVec;
-      mat.uniforms.uSnowLevel.value = params.snowLevel;
-      mat.uniforms.uWaterMurkiness.value = params.waterMurkiness;
     }
     
     if (cloudRef.current) {
       cloudRef.current.rotation.y += params.rotationSpeed * delta * 0.12; 
-      cloudRef.current.rotation.z = params.tilt; 
       
       const mat = cloudRef.current.material as THREE.ShaderMaterial;
       mat.uniforms.uTime.value = time;
-      mat.uniforms.uSunColor.value = sunColorVec;
-      mat.uniforms.uCloudDensity.value = params.cloudDensity;
-    }
-
-    if (atmosMaterial) {
-       atmosMaterial.uniforms.uAtmosphereColor.value.set(params.atmosphereColor);
-       atmosMaterial.uniforms.uSunColor.value = sunColorVec;
     }
   });
 
