@@ -67,35 +67,12 @@ const PlanetMesh: React.FC<{ params: PlanetParameters, onClick: (uv: THREE.Vecto
   const DEFAULT_CLOUD = 'https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/earth_clouds_1024.png';
 
   // State for textures to handle dynamic swapping
-  const [textures, setTextures] = useState({
-    day: new THREE.TextureLoader().load(DEFAULT_DAY),
-    spec: new THREE.TextureLoader().load(DEFAULT_SPEC),
-    norm: new THREE.TextureLoader().load(DEFAULT_NORM),
-    cloud: new THREE.TextureLoader().load(DEFAULT_CLOUD)
+  const textures = useTexture({
+    day: params.textureMapUrl || DEFAULT_DAY,
+    spec: DEFAULT_SPEC,
+    norm: DEFAULT_NORM,
+    cloud: params.cloudMapUrl || DEFAULT_CLOUD
   });
-
-  // Handle Dynamic Texture Updates
-  useEffect(() => {
-      const loader = new THREE.TextureLoader();
-      
-      if (params.textureMapUrl) {
-          loader.load(params.textureMapUrl, (tex) => {
-              setTextures(prev => ({ ...prev, day: tex }));
-          });
-      } else {
-          // If no custom texture, revert to default (or keep current if we want persistence, but let's revert to earth for "reset")
-          // Logic: If params.textureMapUrl is undefined, we assume default Earth mode unless specifically maintaining state
-          if (!params.textureMapUrl) {
-               setTextures(prev => ({ ...prev, day: new THREE.TextureLoader().load(DEFAULT_DAY) }));
-          }
-      }
-
-      if (params.cloudMapUrl) {
-          loader.load(params.cloudMapUrl, (tex) => {
-              setTextures(prev => ({ ...prev, cloud: tex }));
-          });
-      }
-  }, [params.textureMapUrl, params.cloudMapUrl]);
 
   // Helper to map SunType to Color
   const getSunColor = (type: string) => {
