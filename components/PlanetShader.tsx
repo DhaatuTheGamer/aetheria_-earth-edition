@@ -89,6 +89,7 @@ export const planetFragmentShader = `
   // City Lights
   uniform vec3 uCityColor;
   uniform float uCityIntensity;
+  uniform sampler2D uCityNoiseTexture;
 
   varying vec2 vUv;
   varying vec3 vNormal;
@@ -154,8 +155,8 @@ export const planetFragmentShader = `
     float nightMask = smoothstep(0.2, -0.2, dot(vNormal, uSunDirection)); 
     
     if (isLand && nightMask > 0.0 && !hasSnow) {
-       float cityNoise = snoise(vPosition * 30.0 + 100.0); 
-       float cityDensity = smoothstep(0.4, 0.8, cityNoise);
+       float cityNoise = texture2D(uCityNoiseTexture, vUv * 20.0).r;
+       float cityDensity = smoothstep(0.6, 0.9, cityNoise);
        if (distFromEquator < 0.8) {
          vec3 cityLights = uCityColor * cityDensity * 2.0 * uCityIntensity;
          nightColor = cityLights * nightMask;
@@ -185,8 +186,8 @@ export const planetFragmentShader = `
     } else if (uMode == 2) {
       // POPULATION MODE
       // Exaggerate city lights, dim terrain
-      float cityNoise = snoise(vPosition * 30.0 + 100.0); 
-      float cityDensity = smoothstep(0.4, 0.8, cityNoise);
+      float cityNoise = texture2D(uCityNoiseTexture, vUv * 20.0).r;
+      float cityDensity = smoothstep(0.6, 0.9, cityNoise);
       if (!isLand || hasSnow) cityDensity = 0.0;
       
       vec3 popColor = mix(vec3(0.0, 0.0, 0.1), uCityColor, cityDensity * uCityIntensity);
