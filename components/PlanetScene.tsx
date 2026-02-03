@@ -67,12 +67,14 @@ export const PlanetMesh: React.FC<{ params: PlanetParameters, onClick: (uv: THRE
   const DEFAULT_CLOUD = 'https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/earth_clouds_1024.png';
 
   // State for textures to handle dynamic swapping
-  const textures = useTexture({
+  const textureConfig = useMemo(() => ({
     day: params.textureMapUrl || DEFAULT_DAY,
     spec: DEFAULT_SPEC,
     norm: DEFAULT_NORM,
     cloud: params.cloudMapUrl || DEFAULT_CLOUD
-  });
+  }), [params.textureMapUrl, params.cloudMapUrl]);
+
+  const textures = useTexture(textureConfig);
 
   // Helper to map SunType to Color
   const getSunColor = (type: string) => {
@@ -169,7 +171,6 @@ export const PlanetMesh: React.FC<{ params: PlanetParameters, onClick: (uv: THRE
       }
     });
   }, [sunDir, sunColorVec, cityNoiseTexture]); // Note: textures not in dep array to avoid full material rebuild, we update uniform directly
-  }, [sunDir]); // Note: textures not in dep array to avoid full material rebuild, we update uniform directly
 
   // Effect to update material uniforms when textures/params change without rebuilding material
   useEffect(() => {
