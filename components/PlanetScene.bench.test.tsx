@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { describe, it, expect, vi } from 'vitest';
 import React from 'react';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -8,17 +9,30 @@ import { PlanetParameters } from '../types';
 // Mock THREE.TextureLoader to avoid network requests and errors
 vi.mock('three', async () => {
   const actual = await vi.importActual('three') as any;
-  class MockTextureLoader {
-    load(url: string, onLoad: (tex: any) => void) {
-      const tex = new actual.Texture();
-      if (onLoad) setTimeout(() => onLoad(tex), 0);
-      return tex;
-    }
-  }
   return {
     ...actual,
-    TextureLoader: MockTextureLoader,
+    TextureLoader: class {
+      load(url: string, onLoad: (tex: any) => void) {
+        const tex = new actual.Texture();
+        if (onLoad) onLoad(tex); // Synchronous callback
+        return tex;
+      }
+    }
   };
+});
+
+// Mock useTexture to avoid TextureLoader issues entirely
+vi.mock('@react-three/drei', async () => {
+    const actual = await vi.importActual('@react-three/drei');
+    return {
+        ...actual,
+        useTexture: () => ({
+            day: new THREE.Texture(),
+            spec: new THREE.Texture(),
+            norm: new THREE.Texture(),
+            cloud: new THREE.Texture(),
+        })
+    };
 });
 
 // Mock maath random to avoid issues
