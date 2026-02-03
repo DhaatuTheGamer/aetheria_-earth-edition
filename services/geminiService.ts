@@ -211,11 +211,18 @@ const poiSchema: Schema = {
   required: ["title", "description"]
 };
 
+const poiCache = new Map<string, POIData>();
+
 export const generatePOIReport = async (loreContext: string, coordinates: { x: number, y: number }): Promise<POIData> => {
   try {
     const lat = Math.round(coordinates.y * 180 - 90);
     const lon = Math.round(coordinates.x * 360 - 180);
     
+    const cacheKey = `${lat}:${lon}:${loreContext}`;
+    if (poiCache.has(cacheKey)) {
+      return poiCache.get(cacheKey)!;
+    }
+
     const prompt = `
       Context: ${loreContext}
       Location: Latitude ${lat}, Longitude ${lon}.
@@ -233,11 +240,14 @@ export const generatePOIReport = async (loreContext: string, coordinates: { x: n
     });
     
     const data = JSON.parse(response.text || "{}");
-    return {
+    const result: POIData = {
       title: data.title,
       description: data.description,
       coordinates
     };
+
+    poiCache.set(cacheKey, result);
+    return result;
   } catch (e) {
     return {
       title: "Signal Lost",
