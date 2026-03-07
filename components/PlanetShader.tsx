@@ -89,13 +89,27 @@ export const planetFragmentShader = `
   // City Lights
   uniform vec3 uCityColor;
   uniform float uCityIntensity;
-  uniform sampler2D uCityNoiseTexture;
 
   varying vec2 vUv;
   varying vec3 vNormal;
   varying vec3 vPosition;
 
   ${commonShaderPart}
+
+  // City Noise (Procedural Hash)
+  float hash(vec2 p) {
+    vec3 p3  = fract(vec3(p.xyx) * .1031);
+    p3 += dot(p3, p3.yzx + 33.33);
+    return fract((p3.x + p3.y) * p3.z);
+  }
+
+  float valueNoise(vec2 x) {
+    vec2 i = floor(x);
+    vec2 f = fract(x);
+    vec2 u = f * f * (3.0 - 2.0 * f);
+    return mix(mix(hash(i + vec2(0.0,0.0)), hash(i + vec2(1.0,0.0)), u.x),
+               mix(hash(i + vec2(0.0,1.0)), hash(i + vec2(1.0,1.0)), u.x), u.y);
+  }
 
   // Visualization Helpers
   vec3 heatmap(float v) {
@@ -155,7 +169,15 @@ export const planetFragmentShader = `
     float nightMask = smoothstep(0.2, -0.2, dot(vNormal, uSunDirection)); 
     
     if (isLand && nightMask > 0.0 && !hasSnow) {
-       float cityNoise = texture2D(uCityNoiseTexture, vUv * 20.0).r;
+       // Using procedural value noise instead of texture for city density
+       // To match seamlessness of a sphere, we map 3D position to 2D for noise or just use uvs knowing polar distortion exists.
+       // However, typical simple UV noise wraps fine horizontally if scaled by integers.
+       // To ensure horizontal wrap on UVs: map x to a circle.
+       float u = vUv.x * 2.0 * 3.14159;
+       float v = vUv.y * 20.0;
+       vec2 wrappedPos = vec2(cos(u)*10.0, v);
+       float cityNoise = valueNoise(wrappedPos);
+
        float cityDensity = smoothstep(0.6, 0.9, cityNoise);
        if (distFromEquator < 0.8) {
          vec3 cityLights = uCityColor * cityDensity * 2.0 * uCityIntensity;
@@ -186,7 +208,11 @@ export const planetFragmentShader = `
     } else if (uMode == 2) {
       // POPULATION MODE
       // Exaggerate city lights, dim terrain
-      float cityNoise = texture2D(uCityNoiseTexture, vUv * 20.0).r;
+      float u = vUv.x * 2.0 * 3.14159;
+      float v = vUv.y * 20.0;
+      vec2 wrappedPos = vec2(cos(u)*10.0, v);
+      float cityNoise = valueNoise(wrappedPos);
+
       float cityDensity = smoothstep(0.6, 0.9, cityNoise);
       if (!isLand || hasSnow) cityDensity = 0.0;
       

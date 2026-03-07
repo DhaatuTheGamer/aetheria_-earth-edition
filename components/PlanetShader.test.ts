@@ -44,8 +44,7 @@ describe('Planet Shaders', () => {
         'uSnowLevel',
         'uWaterMurkiness',
         'uCityColor',
-        'uCityIntensity',
-        'uCityNoiseTexture'
+        'uCityIntensity'
       ];
       requiredUniforms.forEach(uniform => {
         expect(planetFragmentShader).toContain(`uniform `);
