@@ -72,7 +72,35 @@ describe('Planet Shaders', () => {
     });
   });
 
+  describe('cloudVertexShader', () => {
+    it('should define required varyings', () => {
+      expect(cloudVertexShader).toContain('varying vec2 vUv;');
+      expect(cloudVertexShader).toContain('varying vec3 vNormal;');
+      expect(cloudVertexShader).toContain('varying vec3 vPosition;');
+    });
+
+    it('should have a main function', () => {
+      expect(cloudVertexShader).toContain('void main()');
+      expect(cloudVertexShader).toContain('gl_Position =');
+    });
+  });
+
   describe('cloudFragmentShader', () => {
+    it('should include commonShaderPart', () => {
+      expect(cloudFragmentShader).toContain('float snoise(vec3 v)');
+    });
+
+    it('should define required varyings', () => {
+      expect(cloudFragmentShader).toContain('varying vec2 vUv;');
+      expect(cloudFragmentShader).toContain('varying vec3 vNormal;');
+      expect(cloudFragmentShader).toContain('varying vec3 vPosition;');
+    });
+
+    it('should have a main function that sets gl_FragColor', () => {
+      expect(cloudFragmentShader).toContain('void main()');
+      expect(cloudFragmentShader).toContain('gl_FragColor =');
+    });
+
     it('should define required uniforms', () => {
       expect(cloudFragmentShader).toContain('uniform float uTime;');
       expect(cloudFragmentShader).toContain('uniform sampler2D uCloudTexture;');
@@ -87,6 +115,17 @@ describe('Planet Shaders', () => {
 
     it('should discard transparent fragments', () => {
       expect(cloudFragmentShader).toContain('discard;');
+    });
+  });
+
+  describe('atmosphereVertexShader', () => {
+    it('should define required varyings', () => {
+      expect(atmosphereVertexShader).toContain('varying vec3 vNormal;');
+    });
+
+    it('should have a main function', () => {
+      expect(atmosphereVertexShader).toContain('void main()');
+      expect(atmosphereVertexShader).toContain('gl_Position =');
     });
   });
 
