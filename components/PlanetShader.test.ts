@@ -22,6 +22,18 @@ describe('Planet Shaders', () => {
       expect(planetVertexShader).toContain('void main()');
       expect(planetVertexShader).toContain('gl_Position =');
     });
+
+    it('should calculate and assign positions correctly', () => {
+      expect(planetVertexShader).toContain('vUv = uv;');
+      expect(planetVertexShader).toContain('vPosition = position;');
+      expect(planetVertexShader).toContain('vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);');
+      expect(planetVertexShader).toContain('vViewPosition = -mvPosition.xyz;');
+      expect(planetVertexShader).toContain('gl_Position = projectionMatrix * mvPosition;');
+    });
+
+    it('should calculate normals correctly', () => {
+      expect(planetVertexShader).toContain('vNormal = normalize(normalMatrix * normal);');
+    });
   });
 
   describe('planetFragmentShader', () => {
@@ -72,6 +84,19 @@ describe('Planet Shaders', () => {
     });
   });
 
+  describe('cloudVertexShader', () => {
+    it('should define required varyings', () => {
+      expect(cloudVertexShader).toContain('varying vec2 vUv;');
+      expect(cloudVertexShader).toContain('varying vec3 vNormal;');
+      expect(cloudVertexShader).toContain('varying vec3 vPosition;');
+    });
+
+    it('should have a main function that sets gl_Position', () => {
+      expect(cloudVertexShader).toContain('void main()');
+      expect(cloudVertexShader).toContain('gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);');
+    });
+  });
+
   describe('cloudFragmentShader', () => {
     it('should define required uniforms', () => {
       expect(cloudFragmentShader).toContain('uniform float uTime;');
@@ -90,6 +115,17 @@ describe('Planet Shaders', () => {
     });
   });
 
+  describe('atmosphereVertexShader', () => {
+    it('should define required varyings', () => {
+      expect(atmosphereVertexShader).toContain('varying vec3 vNormal;');
+    });
+
+    it('should have a main function and set gl_Position', () => {
+      expect(atmosphereVertexShader).toContain('void main()');
+      expect(atmosphereVertexShader).toContain('gl_Position =');
+    });
+  });
+
   describe('atmosphereFragmentShader', () => {
     it('should define required uniforms', () => {
       expect(atmosphereFragmentShader).toContain('uniform vec3 uAtmosphereColor;');
@@ -105,7 +141,9 @@ describe('Planet Shaders', () => {
   describe('commonShaderPart', () => {
     it('should define noise functions', () => {
       expect(commonShaderPart).toContain('vec3 mod289(vec3 x)');
+      expect(commonShaderPart).toContain('vec4 mod289(vec4 x)');
       expect(commonShaderPart).toContain('vec4 permute(vec4 x)');
+      expect(commonShaderPart).toContain('vec4 taylorInvSqrt(vec4 r)');
       expect(commonShaderPart).toContain('float snoise(vec3 v)');
     });
   });

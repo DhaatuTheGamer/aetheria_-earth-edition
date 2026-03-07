@@ -22,21 +22,31 @@ interface SceneProps {
 // ------------------------------------------------------------------
 // SATELLITE RING
 // ------------------------------------------------------------------
+const SATELLITE_CONFIG = {
+  particleCount: 3000,
+  radius: 3.5,
+  speedXDivisor: 10,
+  speedYDivisor: 15,
+  tiltAngle: Math.PI / 4,
+  color: "#ffa0e0",
+  size: 0.02,
+};
+
 const SatelliteRing = () => {
   const ref = useRef<THREE.Points>(null);
-  const [sphere] = useState(() => random.inSphere(new Float32Array(3000), { radius: 3.5 })); 
+  const [sphere] = useState(() => random.inSphere(new Float32Array(SATELLITE_CONFIG.particleCount), { radius: SATELLITE_CONFIG.radius }));
 
   useFrame((state, delta) => {
     if (ref.current) {
-      ref.current.rotation.x -= delta / 10;
-      ref.current.rotation.y -= delta / 15;
+      ref.current.rotation.x -= delta / SATELLITE_CONFIG.speedXDivisor;
+      ref.current.rotation.y -= delta / SATELLITE_CONFIG.speedYDivisor;
     }
   });
 
   return (
-    <group rotation={[0, 0, Math.PI / 4]}>
+    <group rotation={[0, 0, SATELLITE_CONFIG.tiltAngle]}>
       <Points ref={ref} positions={sphere as Float32Array} stride={3} frustumCulled={false}>
-        <PointMaterial transparent color="#ffa0e0" size={0.02} sizeAttenuation={true} depthWrite={false} />
+        <PointMaterial transparent color={SATELLITE_CONFIG.color} size={SATELLITE_CONFIG.size} sizeAttenuation={true} depthWrite={false} />
       </Points>
     </group>
   );
@@ -59,15 +69,78 @@ const getSunColor = (type: string) => {
 
 const SUN_DIR = new THREE.Vector3(1, 0.5, 1).normalize();
 
+// Default textures
+const DEFAULT_DAY = 'https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/earth_atmos_2048.jpg';
+const DEFAULT_SPEC = 'https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/earth_specular_2048.jpg';
+const DEFAULT_NORM = 'https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/earth_normal_2048.jpg';
+const DEFAULT_CLOUD = 'https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/earth_clouds_1024.png';
+
+// Map DataLayer string to int
+const getModeInt = (mode: string) => {
+  switch(mode) {
+    case 'thermal': return 1;
+    case 'population': return 2;
+    case 'vegetation': return 3;
+    default: return 0;
+  }
+};
+
+// Generate a seamless noise texture for city lights
+const generateCityNoiseTexture = () => {
+    const size = 64;
+    const data = new Uint8Array(size * size * 4);
+
+    // Generate low-res base noise (16x16) for coherence
+    const baseSize = 16;
+    const baseData = new Float32Array(baseSize * baseSize);
+    for(let i=0; i<baseData.length; i++) baseData[i] = Math.random();
+
+    // Upscale to size x size with bilinear interpolation and wrapping
+    for (let y = 0; y < size; y++) {
+        for (let x = 0; x < size; x++) {
+            // Normalized coords in base grid
+            const u = (x / size) * baseSize;
+            const v = (y / size) * baseSize;
+
+            const x0 = Math.floor(u);
+            const y0 = Math.floor(v);
+            const x1 = (x0 + 1) % baseSize;
+            const y1 = (y0 + 1) % baseSize; // Wrap for seamlessness
+
+            const fracX = u - x0;
+            const fracY = v - y0;
+
+            // Bilinear interp
+            const v00 = baseData[y0 * baseSize + x0];
+            const v10 = baseData[y0 * baseSize + x1];
+            const v01 = baseData[y1 * baseSize + x0];
+            const v11 = baseData[y1 * baseSize + x1];
+
+            const i1 = v00 * (1 - fracX) + v10 * fracX;
+            const i2 = v01 * (1 - fracX) + v11 * fracX;
+            const val = i1 * (1 - fracY) + i2 * fracY;
+
+            const byteVal = Math.floor(val * 255);
+            const idx = (y * size + x) * 4;
+            data[idx] = byteVal;
+            data[idx+1] = byteVal;
+            data[idx+2] = byteVal;
+            data[idx+3] = 255;
+        }
+    }
+
+    const texture = new THREE.DataTexture(data, size, size, THREE.RGBAFormat);
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.minFilter = THREE.LinearFilter;
+    texture.magFilter = THREE.LinearFilter;
+    texture.needsUpdate = true;
+    return texture;
+};
+
 export const PlanetMesh: React.FC<{ params: PlanetParameters, onClick: (uv: THREE.Vector2) => void }> = ({ params, onClick }) => {
   const meshRef = useRef<THREE.Mesh>(null);
   const cloudRef = useRef<THREE.Mesh>(null);
-
-  // Default textures
-  const DEFAULT_DAY = 'https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/earth_atmos_2048.jpg';
-  const DEFAULT_SPEC = 'https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/earth_specular_2048.jpg';
-  const DEFAULT_NORM = 'https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/earth_normal_2048.jpg';
-  const DEFAULT_CLOUD = 'https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/earth_clouds_1024.png';
 
   // State for textures to handle dynamic swapping
   const textureConfig = useMemo(() => ({
@@ -81,68 +154,7 @@ export const PlanetMesh: React.FC<{ params: PlanetParameters, onClick: (uv: THRE
 
   const sunColorVec = getSunColor(params.sunType);
 
-  // Map DataLayer string to int
-  const getModeInt = (mode: string) => {
-    switch(mode) {
-      case 'thermal': return 1;
-      case 'population': return 2;
-      case 'vegetation': return 3;
-      default: return 0;
-    }
-  };
-
-  // Generate a seamless noise texture for city lights
-  const cityNoiseTexture = useMemo(() => {
-      const size = 64;
-      const data = new Uint8Array(size * size * 4);
-
-      // Generate low-res base noise (16x16) for coherence
-      const baseSize = 16;
-      const baseData = new Float32Array(baseSize * baseSize);
-      for(let i=0; i<baseData.length; i++) baseData[i] = Math.random();
-
-      // Upscale to size x size with bilinear interpolation and wrapping
-      for (let y = 0; y < size; y++) {
-          for (let x = 0; x < size; x++) {
-              // Normalized coords in base grid
-              const u = (x / size) * baseSize;
-              const v = (y / size) * baseSize;
-
-              const x0 = Math.floor(u);
-              const y0 = Math.floor(v);
-              const x1 = (x0 + 1) % baseSize;
-              const y1 = (y0 + 1) % baseSize; // Wrap for seamlessness
-
-              const fracX = u - x0;
-              const fracY = v - y0;
-
-              // Bilinear interp
-              const v00 = baseData[y0 * baseSize + x0];
-              const v10 = baseData[y0 * baseSize + x1];
-              const v01 = baseData[y1 * baseSize + x0];
-              const v11 = baseData[y1 * baseSize + x1];
-
-              const i1 = v00 * (1 - fracX) + v10 * fracX;
-              const i2 = v01 * (1 - fracX) + v11 * fracX;
-              const val = i1 * (1 - fracY) + i2 * fracY;
-
-              const byteVal = Math.floor(val * 255);
-              const idx = (y * size + x) * 4;
-              data[idx] = byteVal;
-              data[idx+1] = byteVal;
-              data[idx+2] = byteVal;
-              data[idx+3] = 255;
-          }
-      }
-
-      const texture = new THREE.DataTexture(data, size, size, THREE.RGBAFormat);
-      texture.wrapS = THREE.RepeatWrapping;
-      texture.wrapT = THREE.RepeatWrapping;
-      texture.minFilter = THREE.LinearFilter;
-      texture.magFilter = THREE.LinearFilter;
-      texture.needsUpdate = true;
-      return texture;
-  }, []);
+  const cityNoiseTexture = useMemo(generateCityNoiseTexture, []);
 
   const planetMaterial = useMemo(() => {
     return new THREE.ShaderMaterial({

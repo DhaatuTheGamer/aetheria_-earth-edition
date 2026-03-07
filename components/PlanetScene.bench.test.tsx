@@ -37,7 +37,7 @@ vi.mock('@react-three/drei', async () => {
 
 // Mock maath random to avoid issues
 vi.mock('maath/random/dist/maath-random.esm', () => ({
-  inSphere: (array: any) => array,
+  inSphere: (array: Float32Array) => array,
 }));
 
 describe('PlanetMesh Performance', () => {
@@ -97,8 +97,6 @@ describe('PlanetMesh Performance', () => {
     // Advance frames
     const framesToAdvance = 10;
     await renderer.advanceFrames(framesToAdvance, 0.1);
-
-    console.log(`uSnowLevel setter called ${setCounts} times over ${framesToAdvance} frames`);
 
     // Optimized: Updates moved to useEffect, so no updates during frame loop for static params.
     expect(setCounts).toBe(0);
