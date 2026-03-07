@@ -105,7 +105,9 @@ describe('Planet Shaders', () => {
   describe('commonShaderPart', () => {
     it('should define noise functions', () => {
       expect(commonShaderPart).toContain('vec3 mod289(vec3 x)');
+      expect(commonShaderPart).toContain('vec4 mod289(vec4 x)');
       expect(commonShaderPart).toContain('vec4 permute(vec4 x)');
+      expect(commonShaderPart).toContain('vec4 taylorInvSqrt(vec4 r)');
       expect(commonShaderPart).toContain('float snoise(vec3 v)');
     });
   });
